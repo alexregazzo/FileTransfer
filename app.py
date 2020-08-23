@@ -1,7 +1,7 @@
 from flask import Flask, request, Response
 import json
-import file_manager
 import os
+from archive import File
 
 app = Flask(__name__)
 videos_folder = "D:/Users/Alex/Videos"
@@ -10,12 +10,12 @@ videos_folder = "D:/Users/Alex/Videos"
 @app.route("/fileinfo")
 def fileinfo():
     try:
-        path = request.args["path"]
+        fpath = request.args["fpath"]
     except KeyError:
         return b""
-    path = os.path.join(videos_folder, path)
+
     return json.dumps({
-        "size": file_manager.get_file_size(path)
+        "size": File(fpath).size
     })
 
 
@@ -38,17 +38,20 @@ def gethash():
             length = 0
 
     try:
-        path = request.args["path"]
+        fpath = request.args["fpath"]
     except KeyError:
         return b""
-    path = os.path.join(videos_folder, path)
 
-    return file_manager.get_hash(path, offset, length)
+    return File(fpath).get_hash(offset=offset, length=length)
 
 
 @app.route("/listfiles")
 def listfiles():
-    return json.dumps(os.listdir(videos_folder))
+    try:
+        dpath = request.args["dpath"]
+    except KeyError:
+        return b""
+    return json.dumps(os.listdir(dpath))
 
 
 @app.route("/getdata")
@@ -70,25 +73,11 @@ def getdata():
             length = 0
 
     try:
-        path = request.args["path"]
+        fpath = request.args["fpath"]
     except KeyError:
         return b""
 
-    path = os.path.join(videos_folder, path)
-
-    def yield_file(path, offset, length):
-        with open(path, "rb") as f:
-            f.seek(offset)
-            if length is None:
-                length = file_manager.get_file_size(path) - offset
-
-            chunk = 1024 * 1024  # 1mb
-            k = 0
-            while k < length:
-                yield f.read(chunk)
-                k += chunk
-
-    return Response(yield_file(path, offset, length))
+    return Response(File(fpath).yield_file_bytes_chunks(offset=offset, length=length))
 
 
 if __name__ == "__main__":
