@@ -76,12 +76,19 @@ def getdata():
 
     path = os.path.join(videos_folder, path)
 
-    with open(path, "rb") as f:
-        f.seek(offset)
-        if length is not None:
-            return Response(f.read(length))
-        else:
-            return Response(f.read())
+    def yield_file(path, offset, length):
+        with open(path, "rb") as f:
+            f.seek(offset)
+            if length is None:
+                length = file_manager.get_file_size(path) - offset
+
+            chunk = 1024 * 1024  # 1mb
+            k = 0
+            while k < length:
+                yield f.read(chunk)
+                k += chunk
+
+    return Response(yield_file(path, offset, length))
 
 
 if __name__ == "__main__":

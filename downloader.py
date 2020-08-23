@@ -18,14 +18,18 @@ def check_file(path: str, saveas: str, offset: int = 0, length: int = None) -> b
 
 
 def download_data(path: str, saveas: str, offset: int = 0, length: int = None):
+    fsize = get_file_info(path)["size"]
     with requests.get(F"""{ENDPOINT}getdata?path={path}&offset={offset}{f"&length={length}" if length is not None else ""}""", stream=True) as r:
         if not os.path.exists(saveas):
             with open(saveas, "w"):
                 pass
         with open(saveas, 'r+b') as f:
             f.seek(offset)
+            current = offset
             for chunk in r.iter_content(chunk_size=1024 * 1024):
                 f.write(chunk)
+                current += len(chunk)
+                print(current / fsize)
 
 
 def download_file(path: str, saveas: str):
